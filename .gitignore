@@ -14,10 +14,18 @@ yarn-error.log*
 # Environment variables
 .env
 .env*.local
+.env.*.local
+
+# Temporary files and OS generated files
+.DS_Store
+Thumbs.db
 
 # IDE specific files
 .vscode/
 .idea/
 
-# Mac specific files
-.DS_Store
+# Optional: React build output folder (if different)
+# /client-web/build/
+
+# Optional: Server specific ignores (e.g., coverage reports)
+# /server/coverage/

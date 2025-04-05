@@ -1,7 +1,8 @@
 // client-web/src/pages/LoginPage.js
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 function LoginPage() {
     const [email, setEmail] = useState('');
@@ -9,9 +10,11 @@ function LoginPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation(); // Get location state
+    const { login } = useAuth(); // Get login function from context
 
-    // You'll need context or state management later to handle the logged-in state
-    // const { login } = useAuth(); // Example context usage
+    // Determine where to redirect after login (intended destination or dashboard)
+    const from = location.state?.from?.pathname || "/dashboard";
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,6 +22,7 @@ function LoginPage() {
         setLoading(true);
 
         try {
+            // Replace with your actual backend API endpoint if different
             const response = await axios.post('http://localhost:5000/api/auth/login', {
                 email,
                 password,
@@ -26,14 +30,11 @@ function LoginPage() {
 
             console.log('Login successful:', response.data);
 
-            // **IMPORTANT**: Store the token securely (localStorage is common but has risks)
-            localStorage.setItem('authToken', response.data.token);
+            // Use context login function (this also handles setting token/user state)
+            login(response.data.user, response.data.token);
 
-            // Update auth state using context/state management
-            // login(response.data.user, response.data.token); // Example
-
-            // Redirect to dashboard after successful login
-            navigate('/dashboard'); // Or wherever your main app page is
+            // Redirect to the intended destination or dashboard
+            navigate(from, { replace: true }); // Use replace to avoid login page in history
 
         } catch (err) {
             console.error('Login failed:', err.response ? err.response.data : err.message);
@@ -56,6 +57,7 @@ function LoginPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        autoComplete="email"
                     />
                 </div>
                 <div>
@@ -66,6 +68,7 @@ function LoginPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        autoComplete="current-password"
                     />
                 </div>
                 <button type="submit" disabled={loading}>

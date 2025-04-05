@@ -1,15 +1,17 @@
-// server/server.js (Basic Example - Expand Later)
+// server/server.js
 require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const cors = require('cors');
-// Add database connection logic import later: const connectDB = require('./src/config/db');
+const connectDB = require('./src/config/db'); // Import connectDB
 
-const authRoutes = require('./src/routes/authRoutes'); // Import auth routes
+// Import Routes
+const authRoutes = require('./src/routes/authRoutes');
+const productRoutes = require('./src/routes/productRoutes'); // Import product routes
+
+// Connect to Database
+connectDB();
 
 const app = express();
-
-// Connect to Database (implement connectDB in src/config/db.js later)
-// connectDB();
 
 // Middleware
 app.use(cors()); // Enable CORS for all origins (configure more strictly later)
@@ -18,6 +20,7 @@ app.use(express.json()); // Parse JSON request bodies
 // Define Routes
 app.get('/', (req, res) => res.send('API Running')); // Basic test route
 app.use('/api/auth', authRoutes); // Use auth routes under /api/auth prefix
+app.use('/api/products', productRoutes); // Use product routes under /api/products prefix
 
 const PORT = process.env.PORT || 5000;
 

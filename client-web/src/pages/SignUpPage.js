@@ -1,7 +1,8 @@
 // client-web/src/pages/SignUpPage.js
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Use useNavigate for redirection
-import axios from 'axios'; // For making API calls
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 function SignUpPage() {
     const [email, setEmail] = useState('');
@@ -9,36 +10,37 @@ function SignUpPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate(); // Hook for navigation
+    const navigate = useNavigate();
+    const { login } = useAuth(); // Get login function from context
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(''); // Clear previous errors
+        setError('');
 
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
         }
-        if (password.length < 6) { // Example basic validation
+        if (password.length < 6) {
              setError('Password must be at least 6 characters long');
             return;
         }
 
         setLoading(true);
         try {
-            // Replace with your actual backend API endpoint
-            // Make sure your server is running and CORS is configured
+            // Replace with your actual backend API endpoint if different
             const response = await axios.post('http://localhost:5000/api/auth/register', {
                 email,
                 password,
             });
 
             console.log('Registration successful:', response.data);
-            // Optional: Store token (e.g., in localStorage)
-            // localStorage.setItem('authToken', response.data.token);
 
-            // Redirect to login page or dashboard after successful registration
-            navigate('/login'); // Redirect to login page
+            // Log the user in immediately using the context function
+            login(response.data.user, response.data.token);
+
+            // Redirect to dashboard after successful registration and login
+            navigate('/dashboard');
 
         } catch (err) {
             console.error('Registration failed:', err.response ? err.response.data : err.message);
@@ -61,6 +63,7 @@ function SignUpPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        autoComplete="email"
                     />
                 </div>
                 <div>
@@ -71,6 +74,7 @@ function SignUpPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        autoComplete="new-password"
                     />
                 </div>
                  <div>
@@ -81,6 +85,7 @@ function SignUpPage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
+                        autoComplete="new-password"
                     />
                 </div>
                 <button type="submit" disabled={loading}>

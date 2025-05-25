@@ -1,5 +1,8 @@
 // server/server.js
 require('dotenv').config(); // Load environment variables from .env file
+console.log('--- DEBUG --- MONGO_URI loaded:', process.env.MONGO_URI); // <<< ADD THIS LINE
+console.log('--- DEBUG --- PORT loaded:', process.env.PORT); // <<< Also check PORT
+console.log('--- DEBUG --- JWT_SECRET loaded:', process.env.JWT_SECRET); // <<< Also check SECRET
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/config/db'); // Import connectDB

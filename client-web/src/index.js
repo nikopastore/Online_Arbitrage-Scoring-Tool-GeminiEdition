@@ -1,14 +1,15 @@
 // client-web/src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css'; // Or your main CSS file
+// import './index.css'; // Comment out or remove this
+import './tailwind.css'; // <<< IMPORT THE GENERATED FILE
 import App from './App';
-import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
+import { AuthProvider } from './contexts/AuthContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <AuthProvider> {/* Wrap App with AuthProvider */}
+    <AuthProvider>
       <App />
     </AuthProvider>
   </React.StrictMode>

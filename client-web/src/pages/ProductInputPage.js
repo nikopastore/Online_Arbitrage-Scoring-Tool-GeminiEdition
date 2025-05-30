@@ -11,16 +11,9 @@ const ScoreGauge = ({ score = 0 }) => {
   const circumference = 2 * Math.PI * radius;
   const startAngleOffset = -210; // Degrees from 3 o'clock
   const totalArc = 240; // Degrees
-  const scoreAngle = (scoreValue / 100) * totalArc;
   // Corrected strokeDashoffset logic for an arc that fills up
-  const strokeDashoffset = circumference * (1 - (scoreAngle / 360) * (360 / totalArc) * (totalArc / 360) );
-  // Simplified: strokeDashoffset = circumference * (1 - (scoreAngle / totalArc)); // This is not quite right for SVG arc starting point
-  // Let's use a simpler approach for fill: calculate the end point of the arc
-  // For a 240 degree arc starting at -210 (which is 150 deg from positive x-axis, or -30 deg from negative y-axis)
-  // and ending at 30 deg (or -210 + 240)
-
   const emptyArcOffset = circumference * (1 - (totalArc / 360));
-  const fillArcOffset = circumference * (1 - (scoreAngle / 360));
+  const fillArcOffset = circumference * (1 - (scoreValue / 100) * (totalArc / 360));
 
 
   let color = 'text-red-500'; // Tailwind text color for the number
@@ -176,6 +169,7 @@ function ProductInputPage() {
     const [salesTrend, setSalesTrend] = useState('Stable');
     const [inboundPlacementOption, setInboundPlacementOption] = useState('Optimized');
     const [isDangerousGood, setIsDangerousGood] = useState(false);
+    // *** NEW Optional Inputs ***
     const [estimatedSalesPerMonth, setEstimatedSalesPerMonth] = useState('');
     const [estimatedTimeToSale, setEstimatedTimeToSale] = useState('');
     const [supplierDiscountRebate, setSupplierDiscountRebate] = useState('0');
@@ -195,6 +189,7 @@ function ProductInputPage() {
         setSalesTrend('Stable');
         setInboundPlacementOption('Optimized');
         setIsDangerousGood(false);
+        // Reset NEW fields
         setEstimatedSalesPerMonth('');
         setEstimatedTimeToSale('');
         setSupplierDiscountRebate('0');
@@ -205,7 +200,7 @@ function ProductInputPage() {
         try {
             const response = await axios.post('http://localhost:5000/api/products/lookup', { identifier });
             setProductData(response.data.product);
-            resetOptionalFields(response.data.product); // Reset with fetched data context
+            resetOptionalFields(response.data.product);
             console.log("Fetched Product Data:", response.data.product);
         } catch (err) {
             console.error('Product lookup failed:', err.response ? err.response.data : err.message);
@@ -216,7 +211,7 @@ function ProductInputPage() {
 
      useEffect(() => {
         setProductData(null); setScoreResult(null); setError('');
-        setCostPrice(''); // Also reset cost price
+        setCostPrice('');
         resetOptionalFields();
     }, [identifier]);
 
@@ -237,9 +232,10 @@ function ProductInputPage() {
             salesTrend: salesTrend,
             inboundPlacementOption: inboundPlacementOption,
             isDangerousGood: isDangerousGood,
-            estimatedSalesPerMonth: estimatedSalesPerMonth !== '' && !isNaN(parseInt(estimatedSalesPerMonth)) ? parseInt(estimatedSalesPerMonth) : null,
-            estimatedTimeToSale: estimatedTimeToSale !== '' && !isNaN(parseInt(estimatedTimeToSale)) ? parseInt(estimatedTimeToSale) : null,
-            supplierDiscountRebate: parseFloat(supplierDiscountRebate) || 0
+            // *** Add NEW optional fields (send null if empty/invalid, 0 for rebate) ***
+            estimatedSalesPerMonth: estimatedSalesPerMonth !== '' && !isNaN(parseInt(estimatedSalesPerMonth)) && parseInt(estimatedSalesPerMonth) >= 0 ? parseInt(estimatedSalesPerMonth) : null,
+            estimatedTimeToSale: estimatedTimeToSale !== '' && !isNaN(parseInt(estimatedTimeToSale)) && parseInt(estimatedTimeToSale) >= 0 ? parseInt(estimatedTimeToSale) : null,
+            supplierDiscountRebate: supplierDiscountRebate !== '' && !isNaN(parseFloat(supplierDiscountRebate)) ? parseFloat(supplierDiscountRebate) : 0
         };
         console.log("Sending data to score endpoint:", dataToSend);
         try {
@@ -254,14 +250,14 @@ function ProductInputPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto p-4 md:p-6 font-sans">
+        <div className="max-w-5xl mx-auto p-4 md:p-6 font-sans text-gray-800">
             <header className="text-center mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Product Potential Analyzer</h1>
-                <p className="text-gray-600">Enter product details to calculate its potential score.</p>
+                <h1 className="text-3xl md:text-4xl font-bold text-indigo-700">Product Potential Analyzer</h1>
+                <p className="text-gray-600 mt-1">Enter product details to calculate its potential score.</p>
             </header>
 
             {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md" role="alert">
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-md" role="alert">
                     <p className="font-bold">Error</p>
                     <p>{error}</p>
                 </div>
@@ -269,7 +265,7 @@ function ProductInputPage() {
 
             <section className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">1. Fetch Product Data</h2>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch gap-3"> {/* Changed items-center to items-stretch */}
                     <label htmlFor="identifier" className="sr-only">ASIN or UPC:</label>
                     <input
                         type="text"
@@ -284,7 +280,12 @@ function ProductInputPage() {
                         disabled={loadingLookup || !identifier}
                         className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition duration-150 ease-in-out"
                     >
-                        {loadingLookup ? 'Fetching...' : 'Fetch Data'}
+                        {loadingLookup ? (
+                            <svg className="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : 'Fetch Data'}
                     </button>
                 </div>
             </section>
@@ -295,7 +296,7 @@ function ProductInputPage() {
                 <section className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200">
                     <h2 className="text-xl font-semibold text-gray-700 mb-6">2. Provide Your Inputs</h2>
 
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="mb-6 p-4 bg-slate-100 rounded-lg border border-slate-200">
                         <h3 className="text-lg font-medium text-gray-800 mb-2">Fetched Product:</h3>
                         <div className="flex flex-col md:flex-row items-center gap-4 text-sm">
                             {productData.imageUrl && <img src={productData.imageUrl} alt={productData.title || 'Product'} className="w-24 h-24 border border-gray-300 object-contain rounded-md" />}
@@ -309,38 +310,47 @@ function ProductInputPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="p-4 bg-slate-50 rounded-lg border">
-                            <h4 className="font-semibold text-gray-800 mb-3">Costs & Profit</h4>
+                        {/* Costs & Profit */}
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h4 className="font-semibold text-gray-800 mb-3">Costs & Profit Modifiers</h4>
                             <InputField id="costPrice" label="Your Cost Price ($):" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="e.g., 5.99" required step="0.01" min="0" />
                             <InputField id="advertisingCostPerUnit" label="Est. Ad Cost / Unit ($):" value={advertisingCostPerUnit} onChange={(e) => setAdvertisingCostPerUnit(e.target.value)} placeholder="0.00" step="0.01" min="0" />
                             <InputField id="supplierDiscountRebate" label="Supplier Discount/Rebate ($/Unit):" value={supplierDiscountRebate} onChange={(e) => setSupplierDiscountRebate(e.target.value)} placeholder="0.00" step="0.01" min="0" />
                         </div>
 
-                        <div className="p-4 bg-slate-50 rounded-lg border">
+                        {/* Risk & Condition */}
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                             <h4 className="font-semibold text-gray-800 mb-3">Risk & Condition</h4>
                             <SelectField id="delicacyRating" label="Delicacy Rating:" value={delicacyRating} onChange={(e) => setDelicacyRating(e.target.value)}>
                                 <option value="5">5 (Very Robust)</option> <option value="4">4</option> <option value="3">3 (Average)</option> <option value="2">2</option> <option value="1">1 (Very Delicate)</option>
                             </SelectField>
-                            <CheckboxField id="seasonality" label="Is Seasonal?" checked={seasonality} onChange={(e) => setSeasonality(e.target.checked)} />
-                            <CheckboxField id="isDangerousGood" label="Hazmat/Dangerous Good?" checked={isDangerousGood} onChange={(e) => setIsDangerousGood(e.target.checked)} />
+                            <div className="mt-4 space-y-2"> {/* Grouping checkboxes */}
+                                <CheckboxField id="seasonality" label="Is Seasonal?" checked={seasonality} onChange={(e) => setSeasonality(e.target.checked)} />
+                                <CheckboxField id="isDangerousGood" label="Hazmat/Dangerous Good?" checked={isDangerousGood} onChange={(e) => setIsDangerousGood(e.target.checked)} />
+                            </div>
                         </div>
 
-                        <div className="p-4 bg-slate-50 rounded-lg border">
+                        {/* Market & Competition */}
+                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                              <h4 className="font-semibold text-gray-800 mb-3">Market & Competition</h4>
                              <SelectField id="salesTrend" label="Sales Trend (Recent):" value={salesTrend} onChange={(e) => setSalesTrend(e.target.value)}>
                                 <option value="Growing">Growing</option> <option value="Stable">Stable</option> <option value="Declining">Declining</option>
                              </SelectField>
                              <InputField id="variationsCount" label="Number of Variations:" value={variationsCount} onChange={(e) => setVariationsCount(e.target.value)} placeholder="1" required min="1" step="1"/>
-                             <CheckboxField id="amazonSells" label="Amazon Selling?" checked={amazonSells} onChange={(e) => setAmazonSells(e.target.checked)} />
+                             <div className="mt-4">
+                                <CheckboxField id="amazonSells" label="Amazon Selling Directly?" checked={amazonSells} onChange={(e) => setAmazonSells(e.target.checked)} />
+                             </div>
                         </div>
 
-                        <div className="p-4 bg-slate-50 rounded-lg border">
+                         {/* Velocity (Optional) */}
+                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                              <h4 className="font-semibold text-gray-800 mb-3">Velocity (Optional)</h4>
                              <InputField id="estimatedSalesPerMonth" label="Est. Sales / Month:" value={estimatedSalesPerMonth} onChange={(e) => setEstimatedSalesPerMonth(e.target.value)} placeholder="e.g., 150" min="0" step="1"/>
                              <InputField id="estimatedTimeToSale" label="Est. Time to Sale (Days):" value={estimatedTimeToSale} onChange={(e) => setEstimatedTimeToSale(e.target.value)} placeholder="e.g., 45" min="0" step="1"/>
                         </div>
 
-                        <div className="p-4 bg-slate-50 rounded-lg border md:col-span-2 lg:col-span-1"> {/* Adjust span for layout */}
+                         {/* Fulfillment Section */}
+                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 md:col-span-2 lg:col-span-1">
                               <h4 className="font-semibold text-gray-800 mb-3">Fulfillment</h4>
                               <SelectField id="inboundPlacementOption" label="Inbound Placement Choice:" value={inboundPlacementOption} onChange={(e) => setInboundPlacementOption(e.target.value)}>
                                     <option value="Optimized">Optimized (Free, Multi-DC)</option>
@@ -356,7 +366,12 @@ function ProductInputPage() {
                             disabled={loadingScore || !costPrice}
                             className="px-10 py-4 bg-green-600 text-white rounded-lg text-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition duration-150 ease-in-out"
                         >
-                            {loadingScore ? 'Calculating...' : 'Calculate Score'}
+                            {loadingScore ? (
+                                <svg className="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : 'Calculate Score'}
                         </button>
                     </div>
                 </section>
@@ -367,29 +382,29 @@ function ProductInputPage() {
             {scoreResult && !loadingScore && (
                  <section className="mt-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200">
                     <h2 className="text-2xl font-semibold text-gray-800 text-center mb-6">Score Result</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-6">
                         <div className="md:col-span-1">
                             <ScoreGauge score={scoreResult.score} />
                         </div>
-                        <div className="md:col-span-2 space-y-4">
-                            <p className="text-center md:text-left text-lg text-gray-600">
+                        <div className="md:col-span-2 space-y-3">
+                            <p className="text-lg text-gray-600">
                                 Determined Size Tier: <strong className="text-gray-800">{scoreResult.determinedSizeTier || 'N/A'}</strong>
                             </p>
                              <div className="bg-gray-100 p-4 rounded-lg border">
-                                 <h4 className="font-semibold text-gray-700 mb-2">Key Metrics:</h4>
+                                 <h4 className="font-semibold text-gray-700 mb-2 text-base">Key Metrics:</h4>
                                  <ul className="list-none p-0 m-0 space-y-1 text-sm text-gray-800">
                                      <li>Calculated ROI: <strong className="float-right">{scoreResult.calculatedRoi}%</strong></li>
-                                     <li className="clear-both">Net Profit / Unit: <strong className="float-right">${scoreResult.calculatedNetProfit?.toFixed(2)}</strong></li>
-                                     <li className="clear-both">Total Estimated Fees: <strong className="float-right">${scoreResult.estimatedFees?.toFixed(2)}</strong></li>
-                                     <li className="clear-both">Est. Monthly Storage: <strong className="float-right">${scoreResult.estimatedMonthlyStorageCost?.toFixed(2)}</strong></li>
+                                     <li className="clear-both pt-1">Net Profit / Unit: <strong className="float-right">${scoreResult.calculatedNetProfit?.toFixed(2)}</strong></li>
+                                     <li className="clear-both pt-1">Total Estimated Fees: <strong className="float-right">${scoreResult.estimatedFees?.toFixed(2)}</strong></li>
+                                     <li className="clear-both pt-1">Est. Monthly Storage: <strong className="float-right">${scoreResult.estimatedMonthlyStorageCost?.toFixed(2)}</strong></li>
                                  </ul>
                             </div>
                         </div>
                     </div>
 
                     {scoreResult.warnings && scoreResult.warnings.length > 0 && (
-                        <div className="mt-6">
-                            <h4 className="font-semibold text-gray-700 mb-3">Alerts:</h4>
+                        <div className="mb-6">
+                            <h4 className="font-semibold text-gray-700 mb-3 text-lg">Alerts:</h4>
                             <div className="space-y-2">
                             {scoreResult.warnings.map((warning, index) => (
                                 <WarningItem key={index} level={warning.level} metric={warning.metric} message={warning.message} />

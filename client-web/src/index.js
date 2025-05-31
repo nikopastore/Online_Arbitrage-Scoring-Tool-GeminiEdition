@@ -1,8 +1,7 @@
 // client-web/src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-// import './index.css'; // Comment out or remove this
-import './tailwind.css'; // <<< IMPORT THE GENERATED FILE
+import './tailwind.css'; // <<< IMPORT THE GENERATED TAILWIND CSS
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 

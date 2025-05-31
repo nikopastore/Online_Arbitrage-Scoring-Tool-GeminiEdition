@@ -1,52 +1,69 @@
+// client-web/src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// You might use Firebase or another auth provider here
-// For now, a simple placeholder:
 
 export const AuthContext = createContext();
 
-export const useAuth = () => {
+export function useAuth() {
     return useContext(AuthContext);
-};
+}
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true); // To check auth state on load
-
-    // Placeholder login/logout/signup functions
-    const signup = async (email, password) => {
-        console.log("Placeholder signup:", email);
-        // Replace with actual signup logic
-        setCurrentUser({ email }); // Simulate login
-        return { user: { email }};
-    };
-
-    const login = async (email, password) => {
-        console.log("Placeholder login:", email);
-        // Replace with actual login logic
-        setCurrentUser({ email }); // Simulate login
-        return { user: { email }};
-    };
-
-    const logout = async () => {
-        console.log("Placeholder logout");
-        setCurrentUser(null);
-    };
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Placeholder: Check for existing user session (e.g., from localStorage or Firebase)
-        // const user = JSON.parse(localStorage.getItem('authUser'));
-        // if (user) {
-        //     setCurrentUser(user);
-        // }
-        setLoading(false); // Done checking auth state
+        console.log("Auth Provider: Checking initial auth state.");
+        const storedUser = localStorage.getItem("currentUser");
+        if (storedUser) {
+            try {
+                setCurrentUser(JSON.parse(storedUser));
+                console.log("Auth Provider: User found in localStorage", JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Auth Provider: Error parsing stored user", e);
+                localStorage.removeItem("currentUser");
+            }
+        } else {
+            console.log("Auth Provider: No user found in localStorage.");
+        }
+        setLoading(false);
     }, []);
+
+    async function signup(email, password) {
+        console.log("Auth Provider: Attempting signup for:", email);
+        // Replace with your actual signup logic (e.g., Firebase, backend API call)
+        const newUser = { email: email, uid: `fake-${Date.now()}` }; // Simulate success
+        setCurrentUser(newUser);
+        localStorage.setItem("currentUser", JSON.stringify(newUser));
+        console.log("Auth Provider: Signup successful, currentUser set:", newUser);
+        return newUser;
+    }
+
+    async function login(email, password) {
+        console.log("Auth Provider: Attempting login for:", email);
+        // Replace with your actual login logic
+        const user = { email: email, uid: `fake-${Date.now()}` }; // Simulate success
+        setCurrentUser(user);
+        localStorage.setItem("currentUser", JSON.stringify(user));
+        console.log("Auth Provider: Login successful, currentUser set:", user);
+        return user;
+    }
+
+    async function logout() {
+        console.log("Auth Provider: Attempting logout");
+        setCurrentUser(null);
+        localStorage.removeItem("currentUser");
+        console.log("Auth Provider: Logout successful, currentUser is null.");
+    }
+
+    const isAuthenticated = !!currentUser;
 
     const value = {
         currentUser,
-        login,
+        isAuthenticated,
+        loading,
         signup,
-        logout,
-        // Add other values like resetPassword, updateEmail, updatePassword if needed
+        login,
+        logout
     };
 
     return (
@@ -54,4 +71,4 @@ export const AuthProvider = ({ children }) => {
             {!loading && children}
         </AuthContext.Provider>
     );
-};
+}

@@ -1,12 +1,11 @@
 // client-web/src/components/PrivateRoute.js
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate } from 'react-router-dom'; // Outlet is not needed if used as a wrapper component
 import { useAuth } from '../contexts/AuthContext'; // Adjust path if AuthContext is elsewhere
 
-export default function PrivateRoute() {
-    const { isAuthenticated, currentUser, loading } = useAuth(); // Added currentUser for more detailed logging
+export default function PrivateRoute({ children }) { // <<< Accept 'children' as a prop
+    const { isAuthenticated, currentUser, loading } = useAuth();
 
-    // UPDATED CONSOLE.LOG
     console.log('[PrivateRoute.js] Auth State:', { 
         isAuthenticated: isAuthenticated, 
         currentUser: currentUser ? { email: currentUser.email, uid: currentUser.uid } : null, 
@@ -17,5 +16,7 @@ export default function PrivateRoute() {
         return <div className="flex justify-center items-center h-screen"><p className="text-lg">Checking authentication...</p></div>;
     }
 
-    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    // If authenticated, render the children components passed to PrivateRoute
+    // Otherwise, navigate to the login page
+    return isAuthenticated ? children : <Navigate to="/login" replace />; 
 }

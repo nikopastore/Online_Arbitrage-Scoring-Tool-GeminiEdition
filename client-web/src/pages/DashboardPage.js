@@ -7,8 +7,11 @@ export default function DashboardPage() {
     const { currentUser, isAuthenticated, logout } = useAuth(); // Added isAuthenticated for logging
     const navigate = useNavigate();
 
-    // <<< ADDED CONSOLE.LOG HERE >>>
-    console.log('[DashboardPage.js] Auth State:', { isAuthenticated, currentUser });
+    // UPDATED CONSOLE.LOG
+    console.log('[DashboardPage.js] Auth State & Rendering. currentUser:', 
+        currentUser ? { email: currentUser.email, uid: currentUser.uid } : null, 
+        'isAuthenticated:', isAuthenticated
+    );
 
     const handleLogout = async () => {
         try {
@@ -19,12 +22,11 @@ export default function DashboardPage() {
         }
     };
 
-    if (!currentUser && !isAuthenticated) { // Added a check, though PrivateRoute should handle this
-        return <p className="text-center mt-8">Loading user data or not authenticated...</p>;
-    }
-
     return (
         <div className="container mx-auto p-4 md:p-8">
+            {/* // <<< ADDED VISIBLE MARKER >>> */}
+            <h1 style={{fontSize: "40px", color: "red", border: "2px solid red", padding: "10px"}}>!! DASHBOARD PAGE IS RENDERING !!</h1>
+            
             <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                 <div className="flex justify-between items-center mb-6 pb-4 border-b">
                     <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>

@@ -1,22 +1,25 @@
 // client-web/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link, useNavigate } from 'react-router-dom';
-import './App.css'; // Assuming your App.css contains component-specific or fallback global styles
+import './App.css'; // Import App.css
 
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardPage from './pages/DashboardPage';
 import ProductInputPage from './pages/ProductInputPage';
-import { useAuth } from './contexts/AuthContext'; // AuthProvider is wrapped in index.js
+import { useAuth } from './contexts/AuthContext';
 
 // Navbar Component
 function Navbar() {
     const { isAuthenticated, currentUser, logout } = useAuth();
     const navigate = useNavigate();
 
-    // <<< ADDED CONSOLE.LOG HERE >>>
-    console.log('[Navbar] Auth State:', { isAuthenticated, currentUser });
+    // UPDATED CONSOLE.LOG
+    console.log('[Navbar] Auth State:', { 
+        isAuthenticated: isAuthenticated, 
+        currentUser: currentUser ? { email: currentUser.email, uid: currentUser.uid } : null 
+    });
 
     const handleLogout = async () => {
         try {
@@ -58,8 +61,12 @@ function Navbar() {
 function AppContent() {
   const { isAuthenticated, currentUser, loading } = useAuth();
 
-  // <<< ADDED CONSOLE.LOG HERE >>>
-  console.log('[AppContent] Auth State:', { isAuthenticated, currentUser, loading });
+  // UPDATED CONSOLE.LOG
+  console.log('[AppContent] Auth State:', { 
+      isAuthenticated: isAuthenticated, 
+      currentUser: currentUser ? { email: currentUser.email, uid: currentUser.uid } : null, 
+      loading: loading 
+  });
 
   if (loading) {
       return <div className="flex justify-center items-center h-screen"><p className="text-lg">Loading Application...</p></div>;

@@ -10,6 +10,7 @@ const scoredProductSchema = new mongoose.Schema({
     },
     // Data from lookupProduct (or manual input if API fails)
     asin: { type: String, trim: true, index: true },
+    upc: { type: String, trim: true }, // If available
     title: { type: String, trim: true, required: true },
     imageUrl: { type: String, trim: true },
     category: { type: String, trim: true },
@@ -17,12 +18,16 @@ const scoredProductSchema = new mongoose.Schema({
     bsr: { type: Number },
     fbaSellers: { type: Number },
     weight: { type: Number }, // Unit Weight (lbs)
-    dimensions: { length: Number, width: Number, height: Number }, // Inches
+    dimensions: { // Inches
+        length: Number,
+        width: Number,
+        height: Number,
+    },
     isApparel: { type: Boolean },
     variationsCountFetched: { type: Number }, // Variations count if fetched from lookup
     brand: { type: String },
 
-    // User Inputs for calculateScore
+    // User Inputs at time of scoring
     costPrice: { type: Number, required: true },
     advertisingCostPerUnit: { type: Number, default: 0 },
     delicacyRating: { type: Number, default: 3 },
@@ -54,12 +59,6 @@ const scoredProductSchema = new mongoose.Schema({
     notes: { type: String, trim: true, default: '' },
 
 }, { timestamps: true }); // Adds createdAt and updatedAt
-
-// To ensure a user cannot save the exact same ASIN multiple times IF that's desired.
-// Alternatively, allow multiple saves if user wants to track changes over time.
-// For now, let's assume a user might want to score the same ASIN with different inputs.
-// If you want unique ASINs per user:
-// scoredProductSchema.index({ user: 1, asin: 1 }, { unique: true, partialFilterExpression: { asin: { $type: "string" } } });
 
 
 const ScoredProduct = mongoose.model('ScoredProduct', scoredProductSchema);

@@ -10,6 +10,7 @@ const connectDB = require('./src/config/db'); // Import connectDB
 // Import Routes
 const authRoutes = require('./src/routes/authRoutes');
 const productRoutes = require('./src/routes/productRoutes'); // Import product routes
+const scoredProductRoutes = require('./src/routes/scoredProductRoutes'); // New import
 
 // Connect to Database
 connectDB();
@@ -24,6 +25,7 @@ app.use(express.json()); // Parse JSON request bodies
 app.get('/', (req, res) => res.send('API Running')); // Basic test route
 app.use('/api/auth', authRoutes); // Use auth routes under /api/auth prefix
 app.use('/api/products', productRoutes); // Use product routes under /api/products prefix
+app.use('/api/scored-products', scoredProductRoutes); // For saved history items
 
 const PORT = process.env.PORT || 5000;
 

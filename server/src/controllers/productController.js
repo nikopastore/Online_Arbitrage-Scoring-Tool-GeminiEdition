@@ -98,12 +98,12 @@ const calculateAmazonFees = (productData) => {
 
 // --- lookupProduct Function ---
 // Ensure placeholders include necessary fields for scoring
-exports.lookupProduct = async (req, res) => { /* ... Placeholder logic from user's V20 ... */ };
+exports.lookupProduct = async (req, res) => { /* ... Placeholder logic from your V20 ... */ };
 
 
-// --- Scoring Helper Functions (Normalization) --- V35 (Hybrid BSR & Optional Metrics Scoring)
-const normalizeROI = (roi) => { const minROI=15; const targetROI=100; if(roi<minROI)return 0; let score=(roi-minROI)/(targetROI-minROI); return Math.max(0,score); };
-const normalizeBSR = (bsr) => { /* Using BSR as proxy... */ if(!bsr||bsr<=0)return 0; const divisor=20000; return Math.max(0,Math.min(1,1/(1+bsr/divisor))); };
+// --- Scoring Helper Functions (Normalization) --- V35.1 (Based on V31 + New Sales/TTS)
+const normalizeROI = (roi) => { const minROI=15; const targetROI=100; if(roi<minROI)return 0; let score=(roi-minROI)/(targetROI-minROI); return Math.max(0,Math.min(1,score)); }; // Capped ROI score at 1
+const normalizeBSR = (bsr) => { /* Using BSR as proxy... */ if(!bsr||bsr<=0)return 0.0; const divisor=20000; return Math.max(0,Math.min(1,1/(1+bsr/divisor))); };
 const normalizeCompetition = (fbaSellers) => { if(fbaSellers===undefined||fbaSellers===null||fbaSellers<0)return 0.5; if(fbaSellers===1)return 0.4; if(fbaSellers<=5)return 1.0; if(fbaSellers<=9)return 0.7; if(fbaSellers<=12)return 0.4; if(fbaSellers<=18)return 0.1; return 0.0; };
 const normalizeWeight = (unitWeight) => { /* ... Weight logic based on lbs from V31 ... */ if (unitWeight === null || unitWeight === undefined || unitWeight <= 0) return 0.5; if (unitWeight > 50) return 0.0; if (unitWeight <= 1) return 1.0; if (unitWeight <= 2) return 0.85; if (unitWeight <= 3) return 0.70; if (unitWeight <= 5) return 0.60; if (unitWeight <= 10) return 0.50; if (unitWeight <= 15) return 0.40; if (unitWeight <= 20) return 0.30; const score_at_20=0.30; const score_at_50=0.1; const score_20_50 = score_at_20 - ((unitWeight - 20) * (score_at_20 - score_at_50) / (50 - 20)); return Math.max(score_at_50, score_20_50); };
 const normalizeDimensions = (determinedSizeTier) => { /* ... Tier-based logic from V31, softer penalties ... */ switch (determinedSizeTier) { case 'Small Standard': return 1.0; case 'Large Standard': return 0.8; case 'Large Bulky': return 0.6; case 'Extra-large 0-50lb': return 0.4; case 'Extra-large 50-70lb': return 0.3; case 'Extra-large 70-150lb': return 0.2; case 'Extra-large 150+lb': return 0.1; default: return 0.5; } };
@@ -116,10 +116,10 @@ const normalizeScale5Best = (value) => { if (value === null || value === undefin
 const normalizeSalesPerMonth = (sales) => {
     // console.log(`--- Normalizing Sales/Month: ${sales} ---`); // Optional log
     let score;
-    if (sales === null || sales === undefined || isNaN(sales) || sales < 0) { score = 0.0; /* console.log("Sales Score: 0.0 (Not Provided/Invalid)"); */ } // Treat missing as worst for score contribution
-    else if (sales >= 61) { score = 1.0; /* console.log("Sales Score: 1.0 (>=61)"); */ }   // Best
-    else if (sales >= 30) { score = 0.8; /* console.log("Sales Score: 0.8 (30-60)"); */ }   // Good
-    else if (sales >= 15) { score = 0.5; /* console.log("Sales Score: 0.5 (15-29)"); */ }   // Okay
+    if (sales === null || sales === undefined || isNaN(sales) || sales < 0) { score = 0.0; /* console.log("Sales Score: 0.0 (Not Provided/Invalid)"); */ }
+    else if (sales >= 61) { score = 1.0; /* console.log("Sales Score: 1.0 (>=61)"); */ }
+    else if (sales >= 30) { score = 0.8; /* console.log("Sales Score: 0.8 (30-60)"); */ }
+    else if (sales >= 15) { score = 0.5; /* console.log("Sales Score: 0.5 (15-29)"); */ }
     else { score = 0.1; /* console.log("Sales Score: 0.1 (<15, Poor)"); */ } // Very poor contribution
     return score;
 };
@@ -127,20 +127,20 @@ const normalizeSalesPerMonth = (sales) => {
 const normalizeTimeToSale = (days) => {
     // console.log(`--- Normalizing TimeToSale: ${days} days ---`); // Optional log
     let score;
-    if (days === null || days === undefined || isNaN(days) || days < 0) { score = 0.5; /* console.log("TTS Score: 0.5 (Not Provided/Invalid)"); */ } // Neutral if missing
-    else if (days <= 1) { score = 1.0; /* console.log("TTS Score: 1.0 (<=1d)"); */ }     // Best
-    else if (days <= 30) { score = 0.8; /* console.log("TTS Score: 0.8 (2-30d)"); */ }    // Good
-    else if (days <= 60) { score = 0.6; /* console.log("TTS Score: 0.6 (31-60d)"); */ }   // Okay
-    else if (days <= 90) { score = 0.4; /* console.log("TTS Score: 0.4 (61-90d)"); */ }   // Poor
-    else if (days <= 180) { score = 0.2; /* console.log("TTS Score: 0.2 (91-180d)"); */ }  // Very Poor
-    else { score = 0.0; /* console.log("TTS Score: 0.0 (>180d, Worst)"); */ } // Worst score, will trigger critical warning
+    if (days === null || days === undefined || isNaN(days) || days < 0) { score = 0.5; /* console.log("TTS Score: 0.5 (Not Provided/Invalid)"); */ }
+    else if (days <= 1) { score = 1.0; /* console.log("TTS Score: 1.0 (<=1d)"); */ }
+    else if (days <= 30) { score = 0.8; /* console.log("TTS Score: 0.8 (2-30d)"); */ }
+    else if (days <= 60) { score = 0.6; /* console.log("TTS Score: 0.6 (31-60d)"); */ }
+    else if (days <= 90) { score = 0.4; /* console.log("TTS Score: 0.4 (61-90d)"); */ }
+    else if (days <= 180) { score = 0.2; /* console.log("TTS Score: 0.2 (91-180d)"); */ }
+    else { score = 0.0; /* console.log("TTS Score: 0.0 (>180d, Worst)"); */ }
     return score;
 };
 
 
-// --- calculateScore Function (Version 35 - Hybrid BSR & Optional Metrics Scoring) ---
+// --- calculateScore Function (Version 35.1 - Hybrid BSR & Critical Optional Metrics) ---
 exports.calculateScore = async (req, res) => {
-    console.log("V35 Scoring request received (Hybrid BSR & Optional Metrics).");
+    console.log("V35.1 Scoring request received (Hybrid BSR & Critical Optional Metrics).");
     try {
         const { costPrice, sellingPrice, category, weight, dimensions, bsr, fbaSellers, asin, isApparel, delicacyRating = 3, amazonSells = false, salesTrend = "Stable", seasonality = false, advertisingCostPerUnit = 0, variationsCount = 1, inboundPlacementOption = 'Optimized', isDangerousGood = false, estimatedSalesPerMonth = null, estimatedTimeToSale = null, supplierDiscountRebate = 0 } = req.body;
         let warnings = [];
@@ -180,20 +180,20 @@ exports.calculateScore = async (req, res) => {
         console.log("--- Step 4: Normalization ---");
         // --- 1. Define Weights (BSR is back, optional metrics have small weights) --- *** UPDATED ***
         const weights = {
-            roi: 30,                // Slightly adjusted
-            bsr: 22,                // BSR is back as a primary factor
+            roi: 30,
+            bsr: 22, // BSR is a primary factor
             salesTrend: 10,
             delicacy: 8,
             variationsCount: 8,
             competitionCount: 8,
             amazonPresence: 7,
-            physicalWeight: 4,      // Renamed from 'weight' for clarity
-            physicalDimensions: 3,  // Renamed from 'dimensions' for clarity
+            physicalWeight: 4,      // Renamed from 'weight' from your V20 base
+            physicalDimensions: 3,  // Renamed from 'dimensions' from your V20 base
             seasonality: 4,
             estSalesFactor: 3,      // New small weight for Est Sales/Month
             estTimeToSaleFactor: 3, // New small weight for Est Time To Sale
         };
-        const totalDefinedWeight = 110; // Recalculated: 30+22+10+8+8+8+7+4+3+4+3+3 = 110
+        const totalDefinedWeight = 110; // 30+22+10+8+8+8+7+4+3+4+3+3 = 110
         console.log(` -> Total Defined Weight: ${totalDefinedWeight}`);
 
         // --- 2. Normalize Metrics ---
@@ -203,7 +203,6 @@ exports.calculateScore = async (req, res) => {
         const parsedVariations = parseInt(variationsCount) || 1;
         const parsedDelicacy = parseInt(delicacyRating);
 
-        // *** Calls new/updated normalization functions ***
         const normalized = {
             roi: normalizeROI(roi),
             bsr: normalizeBSR(parsedBSR), // BSR is normalized
@@ -212,8 +211,8 @@ exports.calculateScore = async (req, res) => {
             variationsCount: normalizeVariationsCount(parsedVariations),
             competitionCount: normalizeCompetition(parsedFbaSellers),
             amazonPresence: amazonSells ? 0 : 1,
-            physicalWeight: normalizeWeight(parsedWeight),
-            physicalDimensions: normalizeDimensions(determinedSizeTier),
+            physicalWeight: normalizeWeight(parsedWeight), // Uses new physical weight normalization
+            physicalDimensions: normalizeDimensions(determinedSizeTier), // Uses new dimension normalization
             seasonality: normalizeSeasonality(seasonality),
             estSalesFactor: normalizeSalesPerMonth(parsedSalesPerMonth), // Normalized optional factor
             estTimeToSaleFactor: normalizeTimeToSale(parsedTimeToSale), // Normalized optional factor
@@ -223,7 +222,8 @@ exports.calculateScore = async (req, res) => {
         console.log(`--- DEBUG --- BSR: ${parsedBSR}, Normalized BSR Score: ${normalized.bsr?.toFixed(2)}`);
         console.log(`--- DEBUG --- Input Sales/Mo: ${parsedSalesPerMonth}, Normalized Est Sales Factor: ${normalized.estSalesFactor?.toFixed(2)}`);
         console.log(`--- DEBUG --- Input TimeToSale: ${parsedTimeToSale}, Normalized Est TTS Factor: ${normalized.estTimeToSaleFactor?.toFixed(2)}`);
-        // ... other debug logs ...
+        console.log(`--- DEBUG --- Input Weight: ${parsedWeight}, Normalized physicalWeight Score: ${normalized.physicalWeight?.toFixed(2)}`);
+        console.log(`--- DEBUG --- Determined Size Tier: ${determinedSizeTier}, Normalized physicalDimensions Score: ${normalized.physicalDimensions?.toFixed(2)}`);
 
 
         // --- Define Warning Thresholds ---
@@ -238,18 +238,40 @@ exports.calculateScore = async (req, res) => {
 
         // --- Generate Warnings ---
         console.log("--- Step 5: Generating Warnings ---");
-        // ROI, BSR (now always checked), Competition, Weight, Dimensions, Delicacy, Amazon, Trend, Vars, Seasonality, AdCost, Hazmat, Placement
+        // ROI
         if (roi < ROI_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'ROI', message: `ROI (${roi.toFixed(1)}%) critically low (<${ROI_CRITICAL_THRESHOLD}%).` }); } else if (roi < ROI_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'ROI', message: `ROI (${roi.toFixed(1)}%) low (${ROI_CRITICAL_THRESHOLD}-${ROI_WARNING_THRESHOLD}%).` }); }
+        // BSR (now always checked, as it's a primary scoring factor)
         if (!isNaN(parsedBSR) && parsedBSR > BSR_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'BSR', message: `BSR (${parsedBSR}) critically high (>${BSR_CRITICAL_THRESHOLD}).` }); } else if (!isNaN(parsedBSR) && parsedBSR > BSR_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'BSR', message: `BSR (${parsedBSR}) high (${BSR_WARNING_THRESHOLD}-${BSR_CRITICAL_THRESHOLD}).` }); }
-        // ... other existing warnings ...
+        // Competition
+        if (!isNaN(parsedFbaSellers)) { if (parsedFbaSellers > COMP_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'Competition', message: `Competition (${parsedFbaSellers} FBA) critically high (>${COMP_CRITICAL_THRESHOLD}).` }); } else if (parsedFbaSellers > COMP_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'Competition', message: `Competition (${parsedFbaSellers} FBA) high (${COMP_WARNING_THRESHOLD + 1}-${COMP_CRITICAL_THRESHOLD}).` }); } else if (parsedFbaSellers === 1) { warnings.push({ level: 'warning', metric: 'Competition', message: `Only 1 FBA seller. Check PL risk.` }); } }
+        // Weight
+        if (!isNaN(parsedWeight)) { if (parsedWeight > WEIGHT_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'Weight', message: `Weight (${parsedWeight} lbs) critically high (> ${WEIGHT_CRITICAL_THRESHOLD} lbs).` }); } else if (parsedWeight >= WEIGHT_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'Weight', message: `Weight (${parsedWeight} lbs) high (>= ${WEIGHT_WARNING_THRESHOLD} lbs).` }); } }
+        // Dimensions
+        if (!['Small Standard', 'Large Standard', 'Unknown'].includes(determinedSizeTier)) { warnings.push({ level: 'warning', metric: 'Dimensions', message: `Item size tier is ${determinedSizeTier}. Check fee/handling impact.` }); }
+        // Delicacy
+        if (parsedDelicacy === DELICACY_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'Delicacy', message: `Delicacy rating (${parsedDelicacy}/5) is Critically High Risk.` }); } else if (parsedDelicacy === DELICACY_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'Delicacy', message: `Delicacy rating (${parsedDelicacy}/5) indicates item is fragile.` }); }
+        // Amazon Sells
+        if (amazonSells) { warnings.push({ level: 'warning', metric: 'Amazon Competition', message: `Amazon is selling directly!` }); }
+        // Sales Trend
+        if (salesTrend?.toLowerCase() === 'declining') { warnings.push({ level: 'warning', metric: 'Sales Trend', message: `Sales trend is declining.` }); }
+        // Variations Count
+        if (parsedVariations >= VAR_WARNING_THRESHOLD) { warnings.push({ level: 'warning', metric: 'Variations', message: `High number of variations (${parsedVariations}) (>=${VAR_WARNING_THRESHOLD}).` }); }
+        // Seasonality
+        if (seasonality) { warnings.push({ level: 'warning', metric: 'Seasonality', message: `Product is seasonal.` }); }
+        // Advertising Cost
+        if (parsedAdvertisingCost > 0) { warnings.push({ level: 'warning', metric: 'Advertising', message: `Includes $${parsedAdvertisingCost.toFixed(2)} Ad Cost per unit, affecting ROI.` }); }
+        // Dangerous Goods
+        if (isDangerousGood) { warnings.push({ level: 'warning', metric: 'Compliance', message: `Item flagged as Hazmat/Dangerous Good.` }); }
+        // Placement Option
+        if (inboundPlacementOption !== 'Optimized') { warnings.push({ level: 'warning', metric: 'Placement Fee', message: `Chosen '${inboundPlacementOption}' split incurs placement fees.` }); }
         // Est Sales/Month & TimeToSale Warnings (Critical levels trigger deal breaker)
         if (parsedSalesPerMonth !== null) {
             if(parsedSalesPerMonth < SALES_LOW_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'Est Sales/Mo', message: `Estimated Sales (${parsedSalesPerMonth}/mo) are critically low (< ${SALES_LOW_CRITICAL_THRESHOLD}). High risk of slow turnover.` }); }
-        } else { warnings.push({ level: 'info', metric: 'Est Sales/Mo', message: `Est Sales/Month not provided.` }); } // BSR will be primary sales velocity indicator
+        } // If null, no warning, BSR score handles it
         if (parsedTimeToSale !== null) {
             if (parsedTimeToSale > TIME_SLOW_CRITICAL_THRESHOLD) { warnings.push({ level: 'critical', metric: 'Est Time to Sale', message: `Est. Time to Sale (${parsedTimeToSale} days) is critically long (> ${TIME_SLOW_CRITICAL_THRESHOLD} days). Capital tied up.` }); }
             else if (parsedTimeToSale > TIME_SLOW_WARN_THRESHOLD) { warnings.push({ level: 'warning', metric: 'Est Time to Sale', message: `Est. Time to Sale (${parsedTimeToSale} days) is long (> ${TIME_SLOW_WARN_THRESHOLD} days). Consider holding costs.` }); }
-        } else { warnings.push({ level: 'info', metric: 'Est Time to Sale', message: `Est. Time to Sale not provided.` }); }
+        } // If null, no warning
         if (parsedDiscountRebate > 0) { warnings.push({ level: 'info', metric: 'Discount/Rebate', message: `Includes $${parsedDiscountRebate.toFixed(2)} discount/rebate per unit in profit calculation.` }); }
         console.log(` -> Generated ${warnings.length} warnings.`);
 
@@ -279,7 +301,7 @@ exports.calculateScore = async (req, res) => {
         console.log(` -> Final Score (1-100): ${finalScore}`);
 
         // --- 6. AI Explanation Generation (Placeholder) ---
-        const explanation = `(AI Placeholder - V35 Hybrid Scoring) Score ${finalScore}/100...`;
+        const explanation = `(AI Placeholder - V35.1 Hybrid Scoring) Score ${finalScore}/100...`;
 
         // --- Response ---
         console.log("--- Step 9: Preparing Response Data ---");
@@ -296,4 +318,8 @@ exports.calculateScore = async (req, res) => {
         console.error("!!! UNEXPECTED TOP-LEVEL ERROR in calculateScore:", error);
         res.status(500).json({ message: "Internal Server Error calculating score.", error: error.message });
     }
-};
+}; // End of exports.calculateScore
+
+
+// --- Ensure mongoose is required if used anywhere else ---
+// const mongoose = require('mongoose');
